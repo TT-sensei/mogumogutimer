@@ -3,138 +3,184 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ワクワク黙食コンベア</title>
+    <title>どこでも黙食タイマー</title>
     <style>
         :root {
-            --bg-color: #e0f7fa;
-            --main-orange: #ff7043;
+            --bg-normal: #e3f2fd;
+            --bg-danger: #ffebee;
+            --accent: #ff7043;
         }
         body {
-            background-color: var(--bg-color);
-            font-family: 'Hiragino Kaku Gothic ProN', sans-serif;
+            background-color: var(--bg-normal);
+            font-family: 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
             margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh; /* 画面の高さぴったりに固定 */
             overflow: hidden;
-            text-align: center;
             transition: background-color 0.3s;
         }
 
-        /* 画面上部の進捗バー */
-        #progress-container {
+        /* 設定エリア（開始前のみ表示） */
+        #settings {
+            background: rgba(255,255,255,0.9);
+            padding: 2vh;
+            border-bottom: 2px solid #ccc;
+        }
+
+        /* 進捗バー（画面の一番上） */
+        #progress-bar-container {
             width: 100%;
-            height: 20px;
-            background: #ccc;
+            height: 2vh;
+            background: #ddd;
         }
         #progress-bar {
             width: 100%;
             height: 100%;
             background: #4caf50;
-            transition: width 1s linear;
         }
 
-        /* タイマーとステータス */
-        #header { padding: 20px; }
-        #timer {
-            font-size: 80px;
-            font-weight: bold;
-            color: var(--main-orange);
-            margin: 0;
-        }
-
-        /* 流れる食べ物エリア */
-        #conveyor {
-            height: 150px;
-            background: #fff;
-            border-top: 8px solid #ddd;
-            border-bottom: 8px solid #ddd;
-            position: relative;
+        /* メインコンテンツを均等に配置 */
+        #main-content {
+            flex-grow: 1;
             display: flex;
+            flex-direction: column;
+            justify-content: space-around;
             align-items: center;
+            padding: 1vh 0;
+        }
+
+        #timer {
+            font-size: 15vh; /* 画面の高さに合わせて文字サイズ調整 */
+            font-weight: bold;
+            color: var(--accent);
+            line-height: 1;
+        }
+
+        #status-msg {
+            font-size: 3vh;
+            font-weight: bold;
+            color: #555;
+            height: 4vh;
+        }
+
+        /* 流れる食べ物 */
+        #conveyor {
+            width: 100%;
+            background: #fff;
+            border-top: 4px solid #bbb;
+            border-bottom: 4px solid #bbb;
             overflow: hidden;
-            margin: 30px 0;
+            white-space: nowrap;
+            padding: 1vh 0;
         }
         .food-track {
-            display: flex;
-            white-space: nowrap;
-            animation: flow 10s linear infinite;
-            font-size: 80px;
+            display: inline-block;
+            font-size: 8vh;
+            animation: flow 15s linear infinite;
         }
         @keyframes flow {
             from { transform: translateX(0); }
             to { transform: translateX(-50%); }
         }
 
-        /* キャラクター */
         #character {
-            font-size: 120px;
-            display: inline-block;
-            transition: transform 0.2s;
+            font-size: 12vh;
         }
 
-        /* 音量メーター */
-        #volume-display {
-            margin: 20px auto;
+        /* 下部の音量メーター */
+        #footer {
+            padding: 2vh;
             width: 80%;
-            max-width: 500px;
+            margin: 0 auto;
         }
-        #meter-bar {
-            height: 30px;
-            background: #81c784;
+        .meter-bg {
+            height: 4vh;
+            background: #eee;
+            border-radius: 2vh;
+            border: 3px solid #fff;
+            overflow: hidden;
+            position: relative;
+        }
+        #meter-fill {
+            height: 100%;
             width: 0%;
-            border-radius: 15px;
-            transition: width 0.1s, background-color 0.2s;
+            background: #81c784;
+            transition: width 0.1s;
+        }
+        #threshold-line {
+            position: absolute;
+            top: 0;
+            width: 4px;
+            height: 100%;
+            background: red;
         }
 
-        /* 警告時のスタイル */
-        .danger { background-color: #ffcdd2 !important; }
-        .danger .food-track { animation-play-state: paused; } /* 食べ物が止まる！ */
+        /* 警告時の演出 */
+        .danger { background-color: var(--bg-danger) !important; }
+        .danger .food-track { animation-play-state: paused; }
 
+        input, button {
+            font-size: 2vh;
+            padding: 1vh 2vh;
+            border-radius: 10px;
+        }
         button {
-            padding: 20px 60px;
-            font-size: 24px;
-            border-radius: 50px;
-            border: none;
             background: #0288d1;
             color: white;
+            border: none;
             cursor: pointer;
-            box-shadow: 0 6px #01579b;
         }
     </style>
 </head>
 <body>
 
-<div id="progress-container"><div id="progress-bar"></div></div>
+<div id="progress-bar-container"><div id="progress-bar"></div></div>
 
-<div id="header">
+<div id="settings">
+    給食時間：<input type="number" id="input-minutes" value="15" min="1" style="width: 60px;"> 分
+    しきい値(感度)：<input type="range" id="input-threshold" min="10" max="100" value="45">
+    <button onclick="startApp()">スタート！</button>
+</div>
+
+<div id="main-content">
+    <div id="status-msg">じゅんびは いいかな？</div>
     <div id="timer">15:00</div>
-    <div id="status">「スタート」を押してね！</div>
-</div>
 
-<div id="conveyor">
-    <div class="food-track" id="food-track">
-        🍱 🍙 🍎 🍞 🥛 🍛 🍝 🥗 🍔 🍕 🍱 🍙 🍎 🍞 🥛 🍛 🍝 🥗 🍔 🍕
+    <div id="conveyor">
+        <div class="food-track">
+            🍱 🍙 🍎 🍞 🥛 🍛 🍝 🥗 🍔 🍕 🍱 🍙 🍎 🍞 🥛 🍛 🍝 🥗 🍔 🍕
+        </div>
+    </div>
+
+    <div id="character">😋</div>
+
+    <div id="footer">
+        <div>今の音の大きさ</div>
+        <div class="meter-bg">
+            <div id="meter-fill"></div>
+            <div id="threshold-line"></div>
+        </div>
     </div>
 </div>
-
-<div id="character">😋</div>
-
-<div id="volume-display">
-    <p>いまの おおきさ</p>
-    <div style="background: #eee; border-radius: 15px; overflow: hidden; border: 3px solid #fff;">
-        <div id="meter-bar"></div>
-    </div>
-</div>
-
-<button id="start-btn" onclick="initAudio()">給食スタート！</button>
 
 <script>
-    let timeLeft = 900; // 15分（秒単位）
-    const totalTime = 900;
+    let timeLeft, totalTime;
     let isRunning = false;
     let audioContext, analyser, dataArray;
-    const threshold = 45; // 教室に合わせて調整
+    let threshold = 45;
 
-    async function initAudio() {
+    // しきい値ラインの初期位置
+    document.getElementById('threshold-line').style.left = threshold + "%";
+    document.getElementById('input-threshold').oninput = function() {
+        threshold = this.value;
+        document.getElementById('threshold-line').style.left = threshold + "%";
+    };
+
+    async function startApp() {
         if (isRunning) return;
+        
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -143,12 +189,17 @@
             source.connect(analyser);
             analyser.fftSize = 256;
             dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+            // 時間設定
+            const mins = document.getElementById('input-minutes').value;
+            totalTime = mins * 60;
+            timeLeft = totalTime;
             
-            document.getElementById('start-btn').style.display = 'none';
+            document.getElementById('settings').style.display = 'none';
             isRunning = true;
             tick();
         } catch (e) {
-            alert("マイクの使用を許可してください");
+            alert("マイクをオンにしてください");
         }
     }
 
@@ -157,24 +208,22 @@
         analyser.getByteFrequencyData(dataArray);
         let volume = dataArray.reduce((a, b) => a + b) / dataArray.length;
         
-        // メーター表示の更新
-        const meter = document.getElementById('meter-bar');
-        meter.style.width = Math.min(volume * 2.5, 100) + "%";
+        // 音量メーター更新 (0-100にスケーリング)
+        const volPercent = Math.min(volume * 2, 100);
+        const meter = document.getElementById('meter-fill');
+        meter.style.width = volPercent + "%";
 
-        if (volume > threshold) {
-            // うるさい時
+        if (volPercent > threshold) {
             document.body.classList.add('danger');
             document.getElementById('character').innerText = "🤫";
-            document.getElementById('status').innerText = "しずかに！たべものが とまったよ！";
+            document.getElementById('status-msg').innerText = "しーっ！しずかに 食べよう！";
             meter.style.background = "#e53935";
         } else {
-            // 静かな時
             document.body.classList.remove('danger');
             document.getElementById('character').innerText = "😋";
-            document.getElementById('status').innerText = "もぐもぐ...いいかんじ！";
+            document.getElementById('status-msg').innerText = "もぐもぐ...いいかんじ！";
             meter.style.background = "#81c784";
 
-            // 1秒に1回タイマー更新 (60FPS想定)
             if (frameCount % 60 === 0 && timeLeft > 0) {
                 timeLeft--;
                 updateDisplay();
@@ -193,16 +242,13 @@
         let m = Math.floor(timeLeft / 60);
         let s = timeLeft % 60;
         document.getElementById('timer').innerText = `${m}:${s < 10 ? '0'+s : s}`;
-        
-        // 進捗バーの更新
-        let progress = (timeLeft / totalTime) * 100;
-        document.getElementById('progress-bar').style.width = progress + "%";
+        document.getElementById('progress-bar').style.width = (timeLeft / totalTime) * 100 + "%";
     }
 
     function finish() {
         document.getElementById('character').innerText = "✨";
-        document.getElementById('status').innerText = "ごちそうさまでした！ぴっかぴか！";
-        document.getElementById('food-track').style.display = 'none';
+        document.getElementById('status-msg').innerText = "ぴっかぴか！ごちそうさまでした！";
+        document.body.classList.remove('danger');
     }
 </script>
 </body>
